@@ -1,3 +1,4 @@
+@import './animations.css';
 @import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
@@ -93,11 +94,9 @@
   }
 }
 
-@layer components {
-}
+@layer components {}
 
-@layer utilities {
-}
+@layer utilities {}
 
 :root {
   --sidebar: hsl(0 0% 98%);
@@ -136,6 +135,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

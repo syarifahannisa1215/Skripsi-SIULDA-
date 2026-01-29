@@ -33,16 +33,23 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:admin'])->prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('index');
+    Route::get('/panduan', [DashboardController::class, 'panduan'])->name('panduan');
     Route::get('/ulasan', [KelolaUlasanController::class, 'index'])->name('ulasan.index');
+    Route::post('/ulasan/analyze', [KelolaUlasanController::class, 'analyze'])->name('ulasan.analyze');
+    Route::post('/ulasan/bulk-destroy', [KelolaUlasanController::class, 'bulkDestroy'])->name('ulasan.bulk-destroy');
     Route::patch('/ulasan/{ulasan}', [KelolaUlasanController::class, 'update'])->name('ulasan.update');
     Route::delete('/ulasan/{ulasan}', [KelolaUlasanController::class, 'destroy'])->name('ulasan.destroy');
     Route::get('/ulasan/verifikasi', [VerifikasiUlasanController::class, 'index'])->name('ulasan.verifikasi');
     Route::patch('/ulasan/{ulasan}/verifikasi', [VerifikasiUlasanController::class, 'update'])->name('ulasan.doVerifikasi');
     Route::get('/target', [KelolaTargetController::class, 'index'])->name('target.index');
+    Route::post('/target/bulk-destroy', [KelolaTargetController::class, 'bulkDestroy'])->name('target.bulk-destroy');
     Route::post('/target', [KelolaTargetController::class, 'store'])->name('target.store');
     Route::patch('/target/{target}', [KelolaTargetController::class, 'update'])->name('target.update');
+    Route::delete('/target/{target}', [KelolaTargetController::class, 'destroy'])->name('target.destroy');
     Route::get('/users', [KelolaUserController::class, 'index'])->name('users.index');
+    Route::post('/users/bulk-destroy', [KelolaUserController::class, 'bulkDestroy'])->name('users.bulk-destroy');
     Route::patch('/users/{user}', [KelolaUserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [KelolaUserController::class, 'destroy'])->name('users.destroy');
     Route::get('/search', SearchController::class)->name('search');
     Route::get('/notifications', [NotifikasiController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/mark-as-read', [NotifikasiController::class, 'markAsRead'])->name('notifications.read');

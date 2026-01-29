@@ -79,4 +79,9 @@ class DashboardController extends Controller
             'targetPopuler' => $targetPopuler,
         ]);
     }
+
+    public function panduan(): Response
+    {
+        return Inertia::render('Dashboard/Panduan');
+    }
 }

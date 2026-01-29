@@ -1,6 +1,6 @@
 import React from 'react';
 import { usePage } from '@inertiajs/react';
-import { PageProps } from '@inertiajs/react';
+import { PageProps } from '@/types';
 import { ReviewForm } from '@/components/review/ReviewForm';
 import { TargetUlasan } from '@/types';
 import { MessageSquarePlus, Star, ShieldCheck, Zap } from 'lucide-react';

@@ -13,7 +13,7 @@ class KelolaUserController extends Controller
 {
     public function index(Request $request): Response
     {
-        $filters = $request->only(['search', 'role']);
+        $filters = $request->only(['search', 'role', 'sort']);
 
         $userList = User::query()
             ->when($request->input('search'), function ($query, $search) {
@@ -23,7 +23,25 @@ class KelolaUserController extends Controller
             ->when($request->input('role'), function ($query, $role) {
                 $query->where('role', $role);
             })
-            ->latest()
+            ->when($request->input('sort'), function ($query, $sort) {
+                switch ($sort) {
+                    case 'oldest':
+                        $query->oldest();
+                        break;
+                    case 'name_asc':
+                        $query->orderBy('name', 'asc');
+                        break;
+                    case 'name_desc':
+                        $query->orderBy('name', 'desc');
+                        break;
+                    case 'latest':
+                    default:
+                        $query->latest();
+                        break;
+                }
+            }, function ($query) {
+                $query->latest();
+            })
             ->paginate(15)
             ->withQueryString();
 
@@ -31,6 +49,23 @@ class KelolaUserController extends Controller
             'userList' => $userList,
             'filters' => $filters,
         ]);
+    }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:users,id',
+        ]);
+
+        // Prevent deleting self
+        if (in_array(auth()->id(), $request->ids)) {
+             return back()->with('flash.error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+        }
+
+        User::whereIn('id', $request->ids)->delete();
+
+        return back()->with('flash.success', count($request->ids) . ' user berhasil dihapus.');
     }
 
     public function update(Request $request, User $user): RedirectResponse

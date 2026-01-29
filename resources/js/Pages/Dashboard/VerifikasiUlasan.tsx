@@ -1,14 +1,13 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import React from 'react';
-import { Ulasan, PaginatorLink } from '@/types';
-import { PageProps } from '@inertiajs/react';
+import { Ulasan, PaginatorLink, PageProps } from '@/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
     Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage,
@@ -73,7 +72,7 @@ export default function VerifikasiUlasan({ ulasanList }: VerifikasiProps) {
     return (
         <DashboardLayout breadcrumbs={<VerifikasiBreadcrumb />}>
             <Head title="Verifikasi Sentimen" />
-            
+
             <header className="mb-8">
                 <h1 className="text-3xl font-bold text-foreground">Verifikasi Sentimen</h1>
                 <p className="mt-1 text-muted-foreground">Bantu AI menjadi lebih pintar dengan memvalidasi prediksinya. Ulasan dengan keyakinan terendah muncul di atas.</p>
@@ -91,9 +90,9 @@ export default function VerifikasiUlasan({ ulasanList }: VerifikasiProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {ulasanList.data.length > 0 ? ulasanList.data.map(ulasan => {
+                                {ulasanList.data.length > 0 ? ulasanList.data.map((ulasan: Ulasan) => {
                                     const sentimentColor = ulasan.sentimen_prediksi === 'positif' ? 'default' : ulasan.sentimen_prediksi === 'negatif' ? 'destructive' : 'secondary';
-                                    
+
                                     return (
                                         <TableRow key={ulasan.id}>
                                             <TableCell>
@@ -152,7 +151,7 @@ export default function VerifikasiUlasan({ ulasanList }: VerifikasiProps) {
                             </TableBody>
                         </Table>
                     </div>
-                    
+
                     <TablePagination links={ulasanList.links} />
 
                 </CardContent>

@@ -23,7 +23,7 @@ interface SearchResult {
 
 interface CommandPaletteProps {
     open: boolean;
-    setOpen: (open: (currentOpen: any) => boolean) => void;
+    setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Highlight = ({ text, highlight }: { text: string; highlight: string }) => {

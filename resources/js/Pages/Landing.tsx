@@ -1,7 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import React, { useEffect, useMemo } from 'react';
 import { Ulasan, PaginatorLink, TargetUlasan } from '@/types';
-import { PageProps } from '@inertiajs/react';
+import { PageProps } from '@/types';
 import { toast } from "sonner";
 
 import { Navigation } from '@/components/nav/Navigation';

@@ -27,7 +27,7 @@ class SearchController extends Controller
                 'id' => 'user-'.$user->id,
                 'group' => 'Pengguna',
                 'name' => $user->name,
-                'url' => route('dashboard.users.index'),
+                'url' => route('dashboard.users.index', ['search' => $user->name]),
             ]);
 
         $targets = TargetUlasan::where('nama', 'like', "%{$query}%")
@@ -37,7 +37,7 @@ class SearchController extends Controller
                 'id' => 'target-'.$target->id,
                 'group' => 'Target Ulasan',
                 'name' => $target->nama,
-                'url' => route('dashboard.target.index'),
+                'url' => route('dashboard.target.index', ['search' => $target->nama]),
             ]);
 
         $ulasan = Ulasan::where('konten', 'like', "%{$query}%")
@@ -50,7 +50,7 @@ class SearchController extends Controller
                 'group' => 'Ulasan',
                 'name' => Str::limit($ulasan->konten, 70, '...'),
                 'context' => 'oleh ' . ($ulasan->user->name ?? 'User Dihapus'),
-                'url' => route('dashboard.ulasan.index'),
+                'url' => route('dashboard.ulasan.index', ['search' => $ulasan->konten]),
             ]);
 
         // Gabungkan semua hasil

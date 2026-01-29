@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { BookOpen, Chrome, Menu, X, LogOut, LayoutDashboard, Home, Info, BarChart2, Mail, ChevronRight, User } from 'lucide-react';
 import { route } from 'ziggy-js';
-import { PageProps } from '@inertiajs/react';
+import { PageProps } from '@/types';
 import { cn } from '@/lib/utils';
 
 export function Navigation() {

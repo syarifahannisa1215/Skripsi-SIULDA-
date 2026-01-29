@@ -13,7 +13,7 @@ class KelolaTargetController extends Controller
 {
     public function index(Request $request): Response
     {
-        $filters = $request->only(['search', 'tipe']);
+        $filters = $request->only(['search', 'tipe', 'sort']);
         $targetList = TargetUlasan::query()
             ->when($request->input('search'), function ($query, $search) {
                 $query->where('nama', 'like', "%{$search}%")
@@ -22,7 +22,25 @@ class KelolaTargetController extends Controller
             ->when($request->input('tipe'), function ($query, $tipe) {
                 $query->where('tipe', $tipe);
             })
-            ->latest()
+            ->when($request->input('sort'), function ($query, $sort) {
+                 switch ($sort) {
+                    case 'oldest':
+                        $query->oldest();
+                        break;
+                    case 'name_asc':
+                        $query->orderBy('nama', 'asc');
+                        break;
+                    case 'name_desc':
+                        $query->orderBy('nama', 'desc');
+                        break;
+                    case 'latest':
+                    default:
+                        $query->latest();
+                        break;
+                }
+            }, function ($query) {
+                 $query->latest();
+            })
             ->paginate(15)
             ->withQueryString();
 
@@ -30,6 +48,18 @@ class KelolaTargetController extends Controller
             'targetList' => $targetList,
             'filters' => $filters,
         ]);
+    }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:target_ulasan,id',
+        ]);
+
+        TargetUlasan::whereIn('id', $request->ids)->delete();
+
+        return back()->with('flash.success', count($request->ids) . ' target berhasil dihapus.');
     }
 
     public function store(Request $request): RedirectResponse

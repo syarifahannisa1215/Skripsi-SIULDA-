@@ -1,14 +1,3 @@
-declare module '@inertiajs/react' {
-    export interface PageProps {
-        auth: {
-            user: User | null;
-        };
-        flash: {
-            success: string | null;
-        };
-    }
-}
-
 export interface User {
     id: number;
     name: string;
@@ -17,16 +6,35 @@ export interface User {
     role: 'admin' | 'user';
 }
 
+export type PageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
+    auth: {
+        user: User | null;
+    };
+    flash: {
+        success: string | null;
+        info?: string | null;
+        error?: string | null;
+        warning?: string | null;
+    };
+};
+
 export interface TargetUlasan {
     id: number;
     tipe: 'PEGAWAI' | 'DIVISI';
     nama: string;
     is_active: boolean;
     deskripsi: string;
+    metadata?: any;
+}
+
+export interface sentiment_prediksi {
+    label: string;
+    score: number;
 }
 
 export interface Ulasan {
-    sentimen_prediksi: sentiment_prediksi;
+    sentimen_prediksi: string | null;
+    skor_sentimen: number;
     id: number;
     konten: string;
     rating: number | null;
@@ -34,6 +42,8 @@ export interface Ulasan {
     user: User | null;
     target_ulasan: TargetUlasan;
     visibilitas: string;
+    butuh_tinjauan_manual: boolean;
+    sentimen_terverifikasi: string | null;
 }
 
 export interface PaginatorLink {

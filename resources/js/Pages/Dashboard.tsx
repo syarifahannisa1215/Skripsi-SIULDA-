@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import React from 'react';
-import { PageProps } from '@inertiajs/react';
+import { PageProps } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,7 @@ import {
     Filter,
 } from 'lucide-react';
 import { SentimentChart } from '@/components/dashboard/Chart';
-import {TooltipProps} from "recharts";
+import { TooltipProps } from "recharts";
 
 type Stats = {
     totalUlasan: number;

@@ -2,12 +2,12 @@ import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
     SidebarMenuItem,
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { MoreVertical, LogOut, LayoutDashboard, Settings, Book } from 'lucide-react';
 import { route } from 'ziggy-js';
-import { PageProps } from '@inertiajs/react';
+import { PageProps } from '@/types';
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils';
 
@@ -40,7 +40,7 @@ export function UserNav() {
                             <AvatarImage src={auth.user.avatar || undefined} alt={auth.user.name} />
                             <AvatarFallback>{userInitial}</AvatarFallback>
                         </Avatar>
-                        
+
                         {!isMinimized && (
                             <>
                                 <div className="ml-3 grid flex-1 text-left text-sm leading-tight">
@@ -52,10 +52,10 @@ export function UserNav() {
                         )}
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                    className="w-full" 
-                    align="end" 
-                    side={isMinimized ? "right" : "top"} 
+                <DropdownMenuContent
+                    className="w-full"
+                    align="end"
+                    side={isMinimized ? "right" : "top"}
                     sideOffset={8}
                     avoidCollisions={true}
                     collisionPadding={8}
@@ -63,8 +63,8 @@ export function UserNav() {
                     <DropdownMenuLabel className="p-0 font-normal">
                         <div className="flex items-center gap-3 p-2">
                             <Avatar className="h-9 w-9">
-                               <AvatarImage src={auth.user.avatar || undefined} alt={auth.user.name} />
-                               <AvatarFallback>{userInitial}</AvatarFallback>
+                                <AvatarImage src={auth.user.avatar || undefined} alt={auth.user.name} />
+                                <AvatarFallback>{userInitial}</AvatarFallback>
                             </Avatar>
                             <div className="flex flex-col space-y-1">
                                 <p className="text-sm font-medium leading-none">{auth.user.name}</p>
@@ -75,7 +75,7 @@ export function UserNav() {
                     <DropdownMenuSeparator />
                     {auth.user.role === 'admin' && (
                         <DropdownMenuItem asChild>
-                            <Link href={route('dashboard.index')} className="cursor-pointer">
+                            <Link href={route('dashboard.panduan')} className="cursor-pointer">
                                 <Book className="mr-2 h-4 w-4" />
                                 <span>Panduan</span>
                             </Link>

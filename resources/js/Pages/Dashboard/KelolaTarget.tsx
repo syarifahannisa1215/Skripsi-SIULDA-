@@ -1,7 +1,7 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import React, { useState, useEffect } from 'react';
 import { TargetUlasan, PaginatorLink } from '@/types';
-import { PageProps } from '@inertiajs/react';
+import { PageProps } from '@/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,7 +12,19 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, ToggleLeft, ToggleRight, Edit, Search } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { MoreHorizontal, PlusCircle, ToggleLeft, ToggleRight, Edit, Search, Trash2 } from 'lucide-react';
 import { route } from 'ziggy-js';
 import { TargetForm } from '@/components/dashboard/TargetForm';
 import { useDebounce } from 'use-debounce';
@@ -23,7 +35,7 @@ type KelolaTargetProps = PageProps<{
         data: TargetUlasan[];
         links: PaginatorLink[];
     };
-    filters: { search?: string, tipe?: string };
+    filters: { search?: string, tipe?: string, sort?: string };
 }>;
 
 const KelolaTargetBreadcrumb = () => (
@@ -63,11 +75,29 @@ export default function KelolaTarget({ targetList, filters }: KelolaTargetProps)
     const [editingTarget, setEditingTarget] = useState<TargetUlasan | null>(null);
     const [searchValue, setSearchValue] = useState(filters.search || '');
     const [debouncedSearchValue] = useDebounce(searchValue, 300);
+    const [sortValue, setSortValue] = useState<string>(typeof filters.sort === 'string' ? filters.sort : 'latest');
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [isBulkDelete, setIsBulkDelete] = useState(false);
+    const [targetToDelete, setTargetToDelete] = useState<TargetUlasan | null>(null);
+    const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+    const { delete: destroy, processing } = useForm();
+    const isAllSelected = targetList.data.length > 0 && selectedIds.length === targetList.data.length;
 
     useEffect(() => {
+        if ((filters.search || '') === debouncedSearchValue && (filters.sort || 'latest') === sortValue) return;
         const currentParams = route().params;
-        router.get(route('dashboard.target.index'), { ...currentParams, search: debouncedSearchValue, page: 1 }, { preserveState: true, replace: true });
-    }, [debouncedSearchValue]);
+        router.get(route('dashboard.target.index'), {
+            ...currentParams,
+            search: debouncedSearchValue,
+            sort: sortValue,
+            page: 1
+        }, { preserveState: true, replace: true });
+    }, [debouncedSearchValue, sortValue]);
+
+    useEffect(() => {
+        setSelectedIds([]);
+    }, [targetList.data]);
 
     const openCreateDialog = () => {
         setEditingTarget(null);
@@ -85,28 +115,106 @@ export default function KelolaTarget({ targetList, filters }: KelolaTargetProps)
         }, { preserveScroll: true });
     };
 
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(targetList.data.map(t => t.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id: number, checked: boolean) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(item => item !== id));
+        }
+    };
+
+    const openDeleteDialog = (target: TargetUlasan) => {
+        setIsBulkDelete(false);
+        setTargetToDelete(target);
+        setConfirmDialogOpen(true);
+    };
+
+    const openBulkDeleteDialog = () => {
+        setIsBulkDelete(true);
+        setConfirmDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (isBulkDelete) {
+            router.post(route('dashboard.target.bulk-destroy'), { ids: selectedIds }, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setConfirmDialogOpen(false);
+                    setSelectedIds([]);
+                    setIsBulkDelete(false);
+                },
+                onError: () => {
+                    setConfirmDialogOpen(false);
+                    setIsBulkDelete(false);
+                }
+            });
+            return;
+        }
+
+        if (!targetToDelete) return;
+
+        destroy(route('dashboard.target.destroy', { target: targetToDelete.id }), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setConfirmDialogOpen(false);
+                setTargetToDelete(null);
+            },
+            onError: () => {
+                setConfirmDialogOpen(false);
+                setTargetToDelete(null);
+            },
+        });
+    };
+
+
     return (
         <DashboardLayout breadcrumbs={<KelolaTargetBreadcrumb />}>
             <Head title="Kelola Target" />
 
-            <header className="flex items-center justify-between mb-8">
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground">Manajemen Target Ulasan</h1>
                     <p className="mt-1 text-muted-foreground">Tambah, ubah, dan kelola semua pegawai atau divisi yang dapat diulas.</p>
                 </div>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button onClick={openCreateDialog}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Tambah Target Baru
+                <div className="flex items-center gap-2 flex-wrap">
+                    {selectedIds.length > 0 && (
+                        <Button variant="destructive" onClick={openBulkDeleteDialog}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Hapus ({selectedIds.length})
                         </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
-                        <DialogHeader>
-                            <DialogTitle>{editingTarget ? 'Edit Target Ulasan' : 'Tambah Target Ulasan Baru'}</DialogTitle>
-                        </DialogHeader>
-                        <TargetForm target={editingTarget} onSuccess={() => setDialogOpen(false)} />
-                    </DialogContent>
-                </Dialog>
+                    )}
+                    <Select value={sortValue} onValueChange={setSortValue}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Urutkan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="latest">Terbaru</SelectItem>
+                            <SelectItem value="oldest">Terlama</SelectItem>
+                            <SelectItem value="name_asc">Nama (A-Z)</SelectItem>
+                            <SelectItem value="name_desc">Nama (Z-A)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button onClick={openCreateDialog}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Tambah Target
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[600px]">
+                            <DialogHeader>
+                                <DialogTitle>{editingTarget ? 'Edit Target Ulasan' : 'Tambah Target Ulasan Baru'}</DialogTitle>
+                            </DialogHeader>
+                            <TargetForm target={editingTarget} onSuccess={() => setDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </header>
 
             <Card>
@@ -128,6 +236,12 @@ export default function KelolaTarget({ targetList, filters }: KelolaTargetProps)
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-[50px]">
+                                        <Checkbox
+                                            checked={isAllSelected}
+                                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                        />
+                                    </TableHead>
                                     <TableHead>Nama</TableHead>
                                     <TableHead>Tipe</TableHead>
                                     <TableHead className="text-center">Status</TableHead>
@@ -137,6 +251,12 @@ export default function KelolaTarget({ targetList, filters }: KelolaTargetProps)
                             <TableBody>
                                 {targetList.data.length > 0 ? targetList.data.map((target: TargetUlasan) => (
                                     <TableRow key={target.id}>
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={selectedIds.includes(target.id)}
+                                                onCheckedChange={(checked) => handleSelectOne(target.id, !!checked)}
+                                            />
+                                        </TableCell>
                                         <TableCell>
                                             <div className="font-medium">{target.nama}</div>
                                             <div className="text-sm text-muted-foreground">{target.deskripsi}</div>
@@ -164,13 +284,19 @@ export default function KelolaTarget({ targetList, filters }: KelolaTargetProps)
                                                     <DropdownMenuItem onClick={() => handleToggleActive(target)} className="cursor-pointer">
                                                         {target.is_active ? <><ToggleLeft className="mr-2 h-4 w-4" /> Nonaktifkan</> : <><ToggleRight className="mr-2 h-4 w-4" /> Aktifkan</>}
                                                     </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => openDeleteDialog(target)}
+                                                        className="cursor-pointer text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Hapus Target
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="h-24 text-center">
+                                        <TableCell colSpan={5} className="h-24 text-center">
                                             Tidak ada target yang ditemukan.
                                         </TableCell>
                                     </TableRow>
@@ -181,6 +307,26 @@ export default function KelolaTarget({ targetList, filters }: KelolaTargetProps)
                     <TablePagination links={targetList.links} />
                 </CardContent>
             </Card>
+
+            <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {isBulkDelete
+                                ? `Tindakan ini akan menghapus ${selectedIds.length} target yang dipilih secara permanen.`
+                                : "Tindakan ini tidak dapat dibatalkan. Ini akan menghapus target secara permanen."
+                            }
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setTargetToDelete(null); setIsBulkDelete(false); }}>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} disabled={processing} className="bg-destructive hover:bg-destructive/90">
+                            {processing ? 'Menghapus...' : 'Ya, Hapus'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </DashboardLayout>
     );
 }

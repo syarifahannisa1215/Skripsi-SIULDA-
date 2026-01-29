@@ -1,7 +1,7 @@
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
 import React, { useState, useEffect } from 'react';
 import { Ulasan, PaginatorLink } from '@/types';
-import { PageProps } from '@inertiajs/react';
+import { PageProps } from '@/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -29,7 +29,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, Eye, EyeOff, Search, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MoreHorizontal, Eye, EyeOff, Search, Trash2, Zap } from 'lucide-react';
 import { route } from 'ziggy-js';
 import { useDebounce } from 'use-debounce';
 import { cn } from '@/lib/utils';
@@ -41,7 +43,7 @@ type KelolaUlasanProps = PageProps<{
         data: Ulasan[];
         links: PaginatorLink[];
     };
-    filters: { search?: string, sentiment?: string, status?: string };
+    filters: { search?: string, sentiment?: string, status?: string, sort?: string };
 }>;
 
 const KelolaUlasanBreadcrumb = () => (
@@ -79,15 +81,29 @@ const TablePagination = ({ links }: { links: PaginatorLink[] }) => {
 export default function KelolaUlasan({ ulasanList, filters }: KelolaUlasanProps) {
     const [searchValue, setSearchValue] = useState(filters.search || '');
     const [debouncedSearchValue] = useDebounce(searchValue, 300);
+    const [sortValue, setSortValue] = useState<string>(typeof filters.sort === 'string' ? filters.sort : 'latest');
     const [dialogOpen, setDialogOpen] = useState(false);
     const [ulasanToDelete, setUlasanToDelete] = useState<Ulasan | null>(null);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [isBulkDelete, setIsBulkDelete] = useState(false);
 
     const { delete: destroy, processing } = useForm();
+    const isAllSelected = ulasanList.data.length > 0 && selectedIds.length === ulasanList.data.length;
 
     useEffect(() => {
+        if ((filters.search || '') === debouncedSearchValue && (filters.sort || 'latest') === sortValue) return;
         const currentParams = route().params;
-        router.get(route('dashboard.ulasan.index'), { ...currentParams, search: debouncedSearchValue, page: 1 }, { preserveState: true, replace: true });
-    }, [debouncedSearchValue]);
+        router.get(route('dashboard.ulasan.index'), {
+            ...currentParams,
+            search: debouncedSearchValue,
+            sort: sortValue,
+            page: 1
+        }, { preserveState: true, replace: true });
+    }, [debouncedSearchValue, sortValue]);
+
+    useEffect(() => {
+        setSelectedIds([]); // Reset selection on page change or filter change
+    }, [ulasanList.data]);
 
     const handleVisibilityToggle = (ulasan: Ulasan) => {
         const newVisibility = ulasan.visibilitas === 'dipublikasikan' ? 'disembunyikan' : 'dipublikasikan';
@@ -97,11 +113,49 @@ export default function KelolaUlasan({ ulasanList, filters }: KelolaUlasanProps)
     };
 
     const openDeleteDialog = (ulasan: Ulasan) => {
+        setIsBulkDelete(false);
         setUlasanToDelete(ulasan);
         setDialogOpen(true);
     };
 
+    const openBulkDeleteDialog = () => {
+        setIsBulkDelete(true);
+        setDialogOpen(true);
+    };
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(ulasanList.data.map(u => u.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id: number, checked: boolean) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(item => item !== id));
+        }
+    };
+
     const confirmDelete = () => {
+        if (isBulkDelete) {
+            router.post(route('dashboard.ulasan.bulk-destroy'), { ids: selectedIds }, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setDialogOpen(false);
+                    setSelectedIds([]);
+                    setIsBulkDelete(false);
+                },
+                onError: () => {
+                    setDialogOpen(false);
+                    setIsBulkDelete(false);
+                }
+            });
+            return;
+        }
+
         if (!ulasanToDelete) return;
 
         destroy(route('dashboard.ulasan.destroy', { ulasan: ulasanToDelete.id }), {
@@ -121,13 +175,37 @@ export default function KelolaUlasan({ ulasanList, filters }: KelolaUlasanProps)
         <DashboardLayout breadcrumbs={<KelolaUlasanBreadcrumb />}>
             <Head title="Kelola Ulasan" />
 
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-foreground">Manajemen Ulasan</h1>
+                    <p className="mt-1 text-muted-foreground">Cari, filter, dan moderasi semua ulasan yang masuk ke sistem.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    {selectedIds.length > 0 && (
+                        <Button variant="destructive" onClick={openBulkDeleteDialog}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Hapus ({selectedIds.length})
+                        </Button>
+                    )}
+                    <Select value={sortValue} onValueChange={setSortValue}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Urutkan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="latest">Terbaru</SelectItem>
+                            <SelectItem value="oldest">Terlama</SelectItem>
+                            <SelectItem value="sentiment_desc">Skor Tertinggi</SelectItem>
+                            <SelectItem value="sentiment_asc">Skor Terendah</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button onClick={() => router.post(route('dashboard.ulasan.analyze'))}>
+                        <Zap className="mr-2 h-4 w-4" /> Analisis
+                    </Button>
+                </div>
+            </header>
+
             <Card>
                 <CardHeader>
-                    <CardTitle>Manajemen Ulasan</CardTitle>
-                    <CardDescription>Cari, filter, dan moderasi semua ulasan yang masuk ke sistem.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between">
                         <div className="relative w-full max-w-sm">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                             <Input
@@ -138,11 +216,18 @@ export default function KelolaUlasan({ ulasanList, filters }: KelolaUlasanProps)
                             />
                         </div>
                     </div>
-
+                </CardHeader>
+                <CardContent className="p-6 pt-0">
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-[50px]">
+                                        <Checkbox
+                                            checked={isAllSelected}
+                                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                        />
+                                    </TableHead>
                                     <TableHead className="w-[250px]">Pengulas</TableHead>
                                     <TableHead>Ulasan</TableHead>
                                     <TableHead className="text-center">Sentimen</TableHead>
@@ -153,6 +238,12 @@ export default function KelolaUlasan({ ulasanList, filters }: KelolaUlasanProps)
                             <TableBody>
                                 {ulasanList.data.length > 0 ? ulasanList.data.map((ulasan: Ulasan) => (
                                     <TableRow key={ulasan.id}>
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={selectedIds.includes(ulasan.id)}
+                                                onCheckedChange={(checked) => handleSelectOne(ulasan.id, !!checked)}
+                                            />
+                                        </TableCell>
                                         <TableCell>
                                             <div className="font-medium">{ulasan.user?.name || 'User Dihapus'}</div>
                                             <div className="text-sm text-muted-foreground">{ulasan.user?.email}</div>
@@ -205,7 +296,7 @@ export default function KelolaUlasan({ ulasanList, filters }: KelolaUlasanProps)
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
+                                        <TableCell colSpan={6} className="h-24 text-center">
                                             Tidak ada hasil yang cocok dengan pencarian Anda.
                                         </TableCell>
                                     </TableRow>
@@ -223,11 +314,14 @@ export default function KelolaUlasan({ ulasanList, filters }: KelolaUlasanProps)
                     <AlertDialogHeader>
                         <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data ulasan secara permanen dari server.
+                            {isBulkDelete
+                                ? `Tindakan ini akan menghapus ${selectedIds.length} ulasan yang dipilih secara permanen dari server.`
+                                : "Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data ulasan secara permanen dari server."
+                            }
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setUlasanToDelete(null)}>Batal</AlertDialogCancel>
+                        <AlertDialogCancel onClick={() => { setUlasanToDelete(null); setIsBulkDelete(false); }}>Batal</AlertDialogCancel>
                         <AlertDialogAction onClick={confirmDelete} disabled={processing} className="bg-destructive hover:bg-destructive/90">
                             {processing ? 'Menghapus...' : 'Ya, Hapus'}
                         </AlertDialogAction>
